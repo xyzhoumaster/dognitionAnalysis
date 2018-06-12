@@ -1,0 +1,375 @@
+#########################
+### Dognition dataset ###
+#########################
+
+dognition = read.csv("/Users/xingyanzhou/Downloads/dognition_data.csv")
+str(dognition)
+dim(dognition) #17,986 rows, 32 variables
+head(dognition)
+dognition[1,]
+attach(dognition)
+
+#Exclude columns
+dognition = dognition[, -c(1,4,6,8,9,31,32)]
+str(dognition)
+
+unique(dognition[10]) #weight as factor #may later try converting to numeric
+
+#Rename column
+colnames(dognition)[4] = "Tdiff_days"
+
+#Parse variables into discrete and continuous
+install.packages("dplyr")
+library("dplyr")
+numeric_V = select_if(dognition, is.numeric)
+str(numeric_V)
+factor_V = select_if(dognition, is.factor)
+str(factor_V)              
+
+
+########Handle date time variable########
+LActive_date = factor_V$Last_Active_At #difference between factor_V[20]
+LActive_date
+class(LActive_date) #check class of the variable
+length(which(LActive_date == "01/00/1900 12:00:00 AM")) #4002
+unique(LActive_date)
+
+date = as.Date(LActive_date, format = "%m/%d/%Y") #convert to 'date' class
+date
+
+class(date) #check again the class
+
+#create a data frame and convert date to year, month and day
+
+LActive_date = factor_V$Last_Active_At
+date = as.Date(LActive_date, format = "%m/%d/%Y")
+date_df = data.frame(LActive_year = as.numeric(format(date,format = "%Y")),
+                     LActive_month = as.numeric(format(date, format = "%m")),
+                     LActive_day = as.numeric(format(date, format = "%d")))
+
+date_df #data frame with year, month and day information
+
+
+date_df["LActive_hour"] = 0 #create a new column
+date_df$LActive_hour
+date_df["LActive_minute"] = 0 #create a new column
+date_df$LActive_minute
+tdf = factor_V$Last_Active_At
+#looping through each record and extract and store hour, minute
+for (i in 1:nrow(date_df)){
+  v_h = as.numeric(format(strptime(tdf[i], format = "%m/%d/%Y %I:%M:%S %p" ), format = "%H"))
+  v_m = as.numeric(format(strptime(tdf[i], format = "%m/%d/%Y %I:%M:%S %p"), format = "%M"))
+  date_df$LActive_hour[i] = v_h
+  date_df$LActive_minute[i] = v_m
+  i = i + 1
+}
+
+date_df$LActive_hour
+date_df$LActive_minute
+str(date_df)
+
+class(numeric_V)
+class(date_df)
+
+numeric_V = cbind(numeric_V, date_df) #merge two dataframes
+str(numeric_V)
+class(numeric_V)
+
+factor_V = factor_V[, -20] #drop the original datetime column "Last_Active_At"
+
+str(factor_V)
+
+#View unique values - preparation for converting variable & handling missing values
+columns = c("Gender", "Breed_Type", "Breed_Group", "Dog_Fixed", "DNA_Tested", "Max_Dogs", "Membership_ID",
+            "Subscribed", "Exclude", "Free_Start_User", "Membership_Type")
+
+j = which(names(factor_V)%in%columns) #get the index of the two starting & end columns
+j
+j[1]
+for (k in 1:length(j)){
+  print(unique(factor_V[j[k]]))
+  k = k + 1
+} #view unique / undefined values in certain columns
+
+#Replace undefined values with null - preparation for calculating percentage of missing values
+#R only recognizes missing values in format: NA or NaN
+#Interpret missing/undefined value
+
+
+
+str(factor_V)
+colSums(factor_V == "#N/A")
+colSums(factor_V ==  "#NAME?")
+colSums(factor_V ==  "N/A")
+colSums(factor_V == "")
+colSums(factor_V == 0) #Breed_Group, Weight, Dimension, Sign_in_Count, Max_Dogs, Membership_ID, State, Zip, Membership_Type
+
+factor_V[factor_V == "#N/A"] = NA
+factor_V[factor_V == "#NAME?"] = NA
+factor_V[factor_V == "N/A"] = NA
+factor_V[factor_V == ""] = NA
+
+columns = c("Breed_Group", "Weight", "Dimension", "Sign_in_Count", "Max_Dogs", "Membership_ID", "State",
+            "Zip", "Membership_Type") #in these columns, 0 means missing value
+j = which(names(factor_V)%in%columns)
+j
+factor_V[,j][factor_V[,j] == 0] = NA
+
+#checking missing value
+colMeans(is.na(factor_V))
+
+
+#Dimension:0.7659846547; Zip:0.3560547092, City:0.3540531525; State:0.3563883020; Country:0.3484932725
+
+str(dognition)
+
+dognition_c1 = cbind(numeric_V, factor_V)
+
+str(dognition_c1)
+colMeans(is.na(dognition_c1))
+
+#Data type conversion
+install.packages("varhandle")
+library(varhandle)
+class(dognition_c1$Birthday)
+dognition_c1$Birthday = unfactor(dognition_c1$Birthday)
+dognition_c1$Birthday = as.numeric(2015 - dognition_c1$Birthday)
+colnames(dognition_c1)[which(names(dognition_c1) == "Birthday")] = "Age" 
+
+#dognition_c1$Weight = unfactor(dognition_c1$Weight)
+#dognition_c1$Sign_in_Count = unfactor(dognition_c1$Sign_in_Count)
+#dognition_c1$Max_Dogs = unfactor(dognition_c1$Max_Dogs)
+
+dognition_c1$Birthday = as.numeric(2015 - dognition_c1$Birthday)
+colnames(dognition_c1)[which(names(dognition_c1) == "Birthday")] = "Age" #Encode it as age instead of year; reason
+#dognition_c1$Weight = as.numeric(dognition_c1$Weight)
+#dognition_c1$Sign_in_Count = as.numeric(dognition_c1$Sign_in_Count)
+#dognition_c1$Max_Dogs = as.numeric(dognition_c1$Max_Dogs)
+
+str(dognition_c1)
+
+####Numeric variables####
+
+#source: https://drsimonj.svbtle.com/quick-plot-of-all-variables
+install.packages("purrr")
+install.packages("tidyr")
+install.packages("ggplot2")
+
+library(purrr)
+library(tidyr)
+library(ggplot2)
+
+dognition_c1 %>%
+  keep(is.numeric) %>%
+  gather() %>%
+  ggplot(aes(value)) +
+  facet_wrap(~ key, scales = "free") +
+  geom_histogram()
+
+#source: https://stats.stackexchange.com/questions/3136/how-to-perform-a-test-using-r-to-see-if-data-follows-normal-distribution
+#Perform normal distribution test
+install.packages("ggpubr")
+library(ggpubr)
+ggqqplot(dognition_c1$Age)
+hist(dognition_c1$Age)
+dognition_c1$Age = log(dognition_c1$Age)
+
+install.packages("car")
+library(car)
+ggqqplot(dognition_c1$Age)
+
+#City:0.3540531525; State:0.3563883020; Country:0.3484932725
+str(dognition_c1)
+
+###############################
+#Look at each column separately
+###############################
+
+#show count/frequency numbers
+ggplot(data = dognition_c1, aes(x = dognition_c1$LActive_year)) + 
+  geom_bar() +
+  geom_text(stat = 'count', aes(label = ..count.., vjust = -1))
+
+barplot(table(dognition_c1$LActive_year), main= "LActive_Year", xlab = "Year", ylab = "Frequency") #LActive_year
+dognition_c1$LActive_year = ifelse(dognition_c1$LActive_year == 2015,1,0) #Active this year?
+class(dognition_c1$LActive_year)
+dognition_c1$LActive_year = factor(dognition_c1$LActive_year)
+
+barplot(table(dognition_c1$LActive_month), main= "LActive_Month", xlab = "Month", ylab = "Frequency") #LActive_month
+dognition_c1$LActive_month = ifelse(dognition_c1$LActive_month%in%c(11,12,1,2,3,4), "W", ifelse(dognition_c1$LActive_month%in%c(5,6,7,8,9,10),"S", NA))
+class(dognition_c1$LActive_month)
+dognition_c1$LActive_month = factor(dognition_c1$LActive_month)
+
+
+#Get the day of the date - preparation for weekday/weekend classification
+for (i in 1:nrow(dognition_c1)){
+  v_w = format(strptime(tdf[i], format = "%m/%d/%Y %I:%M:%S %p" ), format = "%A")
+  dognition_c1$LActive_day[i] = v_w
+  i = i + 1
+}
+
+barplot(table(dognition_c1$LActive_day), main= "LActive_Day", xlab = "Day", ylab = "Frequency") #LActive_day
+dognition_c1$LActive_day = ifelse(dognition_c1$LActive_day%in%c("Saturday", "Sunday"), "WD", ifelse(is.na(dognition_c1$LActive_day),NA, "WK"))
+class(dognition_c1$LActive_day)
+dognition_c1$LActive_day = factor(dognition_c1$LActive_day)
+
+cm = dognition_c1$LActive_minute #copy of the column
+cm_res = log(cm) #try take the log of the column
+hist(cm_res) #view distribution
+
+barplot(table(dognition_c1$LActive_hour), main= "LActive_hour", xlab = "Hour", ylab = "Frequency") #LActive_hour
+dognition_c1$LActive_hour = ifelse(dognition_c1$LActive_hour%in%seq(8, 17),1, ifelse(is.na(dognition_c1$LActive_hour),NA, 0)) #work hour? (1:yes, 0:no)
+class(dognition_c1$LActive_hour)
+dognition_c1$LActive_hour = factor(dognition_c1$LActive_hour)
+
+
+barplot(table(dognition_c1$LActive_minute), main= "LActive_minute", xlab = "Minute", ylab = "Frequency") #LActive_minute
+dognition_c1$LActive_minute = ifelse(dognition_c1$LActive_minute%in%seq(0,15),"first", ifelse(dognition_c1$LActive_minute%in%seq(15,30),"second", 
+                                     ifelse(dognition_c1$LActive_minute%in%seq(30,45), "third", ifelse(dognition_c1$LActive_minute%in%seq(45,60), "fourth", NA)))) #quarterly in an hour
+
+class(dognition_c1$LActive_minute)
+dognition_c1$LActive_minute = factor(dognition_c1$LActive_minute)
+
+####try age as numeric vs. categorical variable
+summary(as.factor(dognition_c1$Age)) #view the count of unique age values
+
+barplot(table(dognition_c1$Age), main= "Age", xlab = "Age", ylab = "Frequency") 
+dognition_c1$Age = ifelse(dognition_c1$Age%in%seq(0,1),"tenth", ifelse(dognition_c1$Age%in%seq(2,3),"twenty", 
+                                     ifelse(dognition_c1$Age%in%seq(4,5), "thirty", ifelse(dognition_c1$Age%in%seq(6,8), "fourty", 
+                                     ifelse(dognition_c1$Age%in%seq(9,10), "fifty", ifelse(dognition_c1$Age%in%seq(11,13), "sixty", 
+                                     ifelse(dognition_c1$Age%in%seq(14,15), "seventy", ifelse(dognition_c1$Age%in%seq(16,24), "exceptional", 
+                                     ifelse(dognition_c1$Age%in%seq(25,33), "record", NA))))))))) #quarterly in an hour
+
+class(dognition_c1$Age)
+dognition_c1$Age = factor(dognition_c1$Age)
+
+
+cg = dognition_c1$Age #create a copy of the column
+hist(cg)
+cg = log(cg) #try log
+cg = scale(cg) # try normalization 
+
+library(dplyr)
+library(ggplot2)
+dognition_c1 %>%
+  count(dognition_c1$Breed) %>%
+  mutate(dognition_c1$Breed = fct_reorder(dognition_c1$Breed, n, .desc = TRUE)) %>%
+  ggplot(aes(x = dognition_c1$Breed, y = n)) + geom_bar(stat = 'identity')
+
+barplot(table(dognition_c1$Breed), main= "Breed", xlab = "Breed", ylab = "Frequency") 
+par("mar")
+par(mar = c(1,1,1,1))
+
+#Get the top n frequent value in a column
+#########**************************
+sort(table(dognition_c1$Breed), decreasing =TRUE)[1:20] #EXCLUDE BREED
+
+barplot(table(dognition_c1$Breed_Type), main= "Breed_Type", xlab = "Breed_Type", ylab = "Frequency") 
+sort(table(dognition_c1$Breed_Type), decreasing =TRUE)[1:5]
+dognition_c1$Breed_Type = ifelse(dognition_c1$Breed_Type == "Pure Breed", 1, ifelse(is.na(dognition_c1$Breed_Type), NA, 0)) #pure breed: 1 (yes)
+class(dognition_c1$Breed_Type)
+dognition_c1$Breed_Type = factor(dognition_c1$Breed_Type)
+
+str(dognition_c1)
+sort(table(dognition_c1$Breed_Group), decreasing =TRUE)[1:9]
+class(dognition_c1$Breed_Group)
+
+cw = dognition_c1$Weight #create a copy of the column
+hist(cw)
+cw = log(cw) #try log
+cw = scale(cw) #try normalization
+###try weight as numeric or categorical variable
+
+sort(table(dognition_c1$Weight), decreasing =TRUE)[1:20]
+dognition_c1$Weight = ifelse(dognition_c1$Weight%in%seq(0,10),"toy", ifelse(dognition_c1$Weight%in%seq(11,30),"small", 
+                      ifelse(dognition_c1$Weight%in%seq(31,50), "medium", ifelse(dognition_c1$Weight%in%seq(51,100), "large", 
+                      ifelse(dognition_c1$Weight%in%seq(101,180), "extra_large", ifelse(dognition_c1$Age%in%seq(11,13), "sixty", 
+                      ifelse(dognition_c1$Age%in%seq(14,15), "seventy", ifelse(dognition_c1$Age%in%seq(16,24), "exceptional", 
+                      ifelse(dognition_c1$Age%in%seq(25,33), "record", NA)))))))))
+class(dognition_c1$Weight)
+dognition_c1$Weight = factor(dognition_c1$Weight)
+
+sort(table(dognition_c1$Dog_Fixed), decreasing =TRUE)[1:3]
+
+sort(table(dognition_c1$DNA_Tested), decreasing =TRUE)[1:3]
+
+sort(table(dognition_c1$Dimension), decreasing =TRUE)[1:11]
+#code NA to make it meaningful
+dognition_c1$Dimension = unfactor(dognition_c1$Dimension)
+dognition_c1$Dimension[is.na(dognition_c1$Dimension)] = "No_profile"
+dognition_c1$Dimension = factor(dognition_c1$Dimension)
+
+barplot(table(dognition_c1$Sign_in_Count), main= "Sign_in_Count", xlab = "Sign_in_Count", ylab = "Frequency") 
+sort(table(dognition_c1$Sign_in_Count), decreasing =TRUE)[1:82]
+summary(as.numeric(dognition_c1$Sign_in_Count))
+#consider other cut-off value(s)
+
+dognition_c1$Sign_in_Count = ifelse(dognition_c1$Sign_in_Count%in%seq(0, 8),"first_Q", 
+                             ifelse(is.na(dognition_c1$Sign_in_Count),NA, 
+                             ifelse(dognition_c1$Sign_in_Count%in%seq(9, 22),"second_Q", 
+                             ifelse(dognition_c1$Sign_in_Count%in%seq(23, 44),"third_Q", "fourth_Q")))) 
+
+sort(table(dognition_c1$Membership_ID), decreasing =TRUE)[1:82]
+sort(table(dognition_c1$Subscribed), decreasing =TRUE)[1:82]
+class(dognition_c1$Sign_in_Count)
+dognition_c1$Sign_in_Count = factor(dognition_c1$Sign_in_Count)
+
+barplot(table(dognition_c1$Max_Dogs), main= "Max_Dogs", xlab = "Max_Dogs", ylab = "Frequency") 
+sort(table(dognition_c1$Max_Dogs), decreasing =TRUE)[1:16]
+
+#Unfactor it first to then convert to as.numeric
+#1 is removed when directly convert to as.numeric
+dognition_c1$Max_Dogs = unfactor(dognition_c1$Max_Dogs)
+dognition_c1$Max_Dogs = as.numeric(dognition_c1$Max_Dogs)
+dognition_c1$Max_Dogs = ifelse(dognition_c1$Max_Dogs>1, 1,
+                        ifelse(is.na(dognition_c1$Max_Dogs), NA,0)) #has more than 1 dog (1: yes)
+dognition_c1$Max_Dogs = factor(dognition_c1$Max_Dogs)
+class(dognition_c1$Max_Dogs)
+
+barplot(table(dognition_c1$Country), main= "Country", xlab = "Country", ylab = "Frequency") 
+sort(table(dognition_c1$Country), decreasing =TRUE)[1:10]
+dognition_c1$Country = ifelse(dognition_c1$Country == "US", 1, ifelse(is.na(dognition_c1$Country), NA,0)) #within US? (1: Yes)
+
+class(dognition_c1$Country)
+dognition_c1$Country = factor(dognition_c1$Country)
+
+dognition_c1$State = ifelse(dognition_c1$State == "CA", 1, ifelse(is.na(dognition_c1$State), NA, 0))
+sort(table(dognition_c1$Membership_ID), decreasing =TRUE)[1:20]
+class(dognition_c1$State)
+dognition_c1$State = factor(dognition_c1$State)
+
+sort(table(dognition_c1$Exclude), decreasing =TRUE)[1:20]
+
+str(dognition_c1)
+sort(table(dognition_c1$Free_Start_User), decreasing =TRUE)[1:10]
+class(dognition_c1$Free_Start_User)
+dognition_c1$Free_Start_User = ifelse(dognition_c1$Free_Start_User == "0", 0, ifelse(dognition_c1$Free_Start_User == 1, 1, NA))
+sort(table(dognition_c1$Free_Start_User), decreasing = TRUE)[1:10]
+dognition_c1$Exclude = as.factor(dognition_c1$Exclude)
+dognition_c1$Free_Start_User = as.factor(dognition_c1$Free_Start_User)
+
+class(dognition_c1$Exclude)
+sort(table(dognition_c1$Exclude), decreasing = TRUE)[1:10]
+dognition_c1$Exclude = ifelse(dognition_c1$Exclude == "0", 0, ifelse(dognition_c1$Exclude == 1, 1, NA))
+
+cmt = dognition_c1$Membership_Type
+cmt[cmt == "CA"] = NA
+sort(table(cmt), decreasing = TRUE)[1:10]
+length(unique(cmt))
+dognition_c1$Membership_Type[dognition_c1$Membership_Type == "CA"] = NA
+levels(dognition_c1$Membership_Type)
+
+str(dognition_c1)
+unique(dognition_c1$Membership_Type)
+####################
+##Organizing columns
+####################
+str(dognition_c1)
+#dognition_c1 = dognition_c1[, -c(25,12)] #Exclude 'Zip' and 'Breed' column
+#change column names to reflect on the change of the data types
+
+######
+dognition_c1 = dognition_c1[,-22] #Exclude 'City' column
+dognition_c1[,2:4] = scale(dognition_c1[,2:4]) #normalizing numeric values
+
+
