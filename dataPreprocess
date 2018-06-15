@@ -1,0 +1,15 @@
+Some key preprocessing treatments included:
+1. Parsed ‘LActive_date’ column and extracted year, month, day, hour and minute value, and created new attributes/columns to store those values, by using ‘as.Date’ and ‘strptime’ functions in R.
+
+2. Identified different ways missing values were encoded in the dataset for different columns, and standardized them with ‘NA’ that R recognizes.
+
+3. Some categorical variables were encoded using ‘if-else’ logic statement for better interpretability. These variables included,
+  a. Encoded ‘LActive_year’ column as binary attribute with 1 (active this year/2015, given this dataset was from 2015) or 0 (active last year/2014). The rationale was that the model is created to predict future events, therefore, the actual number of ‘2014’ or ‘2015’ would not matter
+  b. Encoded ‘LActive_month’ column as binary attribute with ‘Winter’ and ‘Summer’
+  c. Encoded ‘LActive_day’ as binary attribute with ‘WK’ (Weekday) and ‘WD’ (Weekend)
+  d. ‘LActive_hour’ was encoded as 1: (Yes, during work hour) and 0: (No, off-work hour)
+  e. ‘Breed_Type’ was encoded as 1: (Yes, pure breed) and 0
+  f. ‘Country’ was encoded as 1: (Within U.S.) and 0. Before encoding the columns, value frequency was examined. In this case, ‘U.S.’ is the most occuring state in the dataset
+  g. ‘State’ was encoded as 1: (User from/lives in California) and 0. Before encoding the columns, value frequency was examined. In this case, ‘CA’ is the most occuring state in the dataset
+
+4. Considering the possibility that missing value itself might be an insightful indicator of some kind, columns with less concerning percentages of missing values were treated by explicitly adding ‘NA’ as a factor level. This was done by using ‘fct_explicit_na’ function in ‘forcats’ library
