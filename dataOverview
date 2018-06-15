@@ -1,0 +1,9 @@
+The dataset was retrieved from a github site (https://github.com/praveen2593/dognition/blob/master/Dognition-Data-Set-Description.pdf), and it consists of 32 columns and 17,986 rows. The dataset has a numeric dependent variable ‘Total_test_completed’ and 24 independent variables that are categorical and numerical. 
+
+Nine of the dependent variables are used to describe dogs, including ‘Gender’, ‘Birth_year’, ‘Breed’, ‘Breed_Type’, ‘Breed_Group’, ‘Weight’, ‘Dog_Fixed,’ DNA_Tested’ and ‘Dimension.’ 
+
+Eleven of them are related to users, including ‘Sign_in_Count’, ‘Max_Dogs’, ‘Membership_ID’, ‘Subscribed’, ‘City’, ‘State’, ‘Zip’, ‘Country’, ‘Free_Start_User’, ‘Last_Active_At’, and ‘Membership_Type’. 
+
+The four remaining attributes include ‘Mean_ITI_days’, ‘Median_ITI_days’, ‘Tdiff_days’ and ‘Exclude’.
+
+Among these variables, ‘Dimension’ and ‘Breed_Group’ have the largest percentages of missing values that might be concerning, with a percentage of 0.76 and 0.50, respectively.
