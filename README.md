@@ -1,3 +1,0 @@
-# dognitionAnalysis
-
-Preprocessing steps
